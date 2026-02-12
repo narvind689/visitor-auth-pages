@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Reset Successful</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f6f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      background: #4CAF50;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    h1 {
+      color: #1a1a1a;
+      font-size: 24px;
+      margin: 0 0 12px 0;
+    }
+
+    p {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 0 0 32px 0;
+    }
+
+    .instruction {
+      background: #e8f5e9;
+      border: 1px solid #81c784;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #2e7d32;
+    }
+
+    button {
+      background: #3f51b5;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #303f9f;
+    }
+
+    .close-info {
+      margin-top: 24px;
+      font-size: 13px;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="success-icon">✓</div>
+    
+    <h1>Password Reset Successful!</h1>
+    
+    <p>Your password has been updated successfully.</p>
+    
+    <div class="instruction">
+      <strong>Next Step:</strong><br>
+      Return to your app and log in with your new password.
+    </div>
+
+    <button onclick="closeWindow()">Close This Window</button>
+
+    <p class="close-info">You can safely close this window and return to your app.</p>
+  </div>
+
+  <script>
+    // =================================================================
+    // UNIVERSAL DEEP LINK CONFIGURATION
+    // =================================================================
+    
+    // Configure your Flutter app's deep link schemes here
+    const APP_CONFIG = {
+      // Custom URL scheme (works when app is installed)
+      customScheme: null, // Example: 'yourapp://reset-success'
+      
+      // Universal Links / App Links (preferred method)
+      universalLink: null, // Example: 'https://yourapp.com/reset-success'
+      
+      // App Store / Play Store URLs (fallback if app not installed)
+      appStoreUrl: null, // Example: 'https://apps.apple.com/app/your-app/id123456'
+      playStoreUrl: null, // Example: 'https://play.google.com/store/apps/details?id=com.yourapp'
+    };
+    
+    // =================================================================
+    // SMART REDIRECT LOGIC
+    // =================================================================
+    
+    function attemptDeepLink() {
+      // Detect platform
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      const isMobile = isIOS || isAndroid;
+      
+      console.log('🔍 Platform detection:', { isIOS, isAndroid, isMobile });
+      
+      // If no deep link configured, just close the window
+      if (!APP_CONFIG.customScheme && !APP_CONFIG.universalLink) {
+        console.log('📋 No deep link configured - will close window');
+        setTimeout(() => {
+          window.close();
+        }, 5000);
+        return;
+      }
+      
+      // Try universal link first (works on all platforms)
+      if (APP_CONFIG.universalLink) {
+        console.log('🔗 Attempting universal link:', APP_CONFIG.universalLink);
+        attemptUniversalLink();
+        return;
+      }
+      
+      // Fall back to custom scheme
+      if (APP_CONFIG.customScheme) {
+        console.log('🔗 Attempting custom scheme:', APP_CONFIG.customScheme);
+        attemptCustomScheme();
+        return;
+      }
+    }
+    
+    function attemptUniversalLink() {
+      const link = APP_CONFIG.universalLink;
+      let appOpened = false;
+      
+      // Set a timeout to detect if app didn't open
+      const timeout = setTimeout(() => {
+        if (!appOpened) {
+          console.log('⚠️ App did not open - showing fallback');
+          handleAppNotInstalled();
+        }
+      }, 2500);
+      
+      // Detect if user leaves the page (app opened)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          appOpened = true;
+          clearTimeout(timeout);
+          console.log('✅ App opened successfully');
+        }
+      });
+      
+      // Attempt to open the app
+      window.location.href = link;
+    }
+    
+    function attemptCustomScheme() {
+      const scheme = APP_CONFIG.customScheme;
+      let appOpened = false;
+      
+      // Create invisible iframe to attempt app launch
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = scheme;
+      document.body.appendChild(iframe);
+      
+      // Set a timeout to detect if app didn't open
+      const timeout = setTimeout(() => {
+        document.body.removeChild(iframe);
+        if (!appOpened) {
+          console.log('⚠️ App did not open - showing fallback');
+          handleAppNotInstalled();
+        }
+      }, 2500);
+      
+      // Detect if user leaves the page (app opened)
+      window.addEventListener('blur', () => {
+        appOpened = true;
+        clearTimeout(timeout);
+        console.log('✅ App opened successfully');
+      });
+    }
+    
+    function handleAppNotInstalled() {
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const isAndroid = /Android/i.test(navigator.userAgent);
+      
+      // Show a message with app store links
+      const messageEl = document.querySelector('.instruction');
+      
+      if (isIOS && APP_CONFIG.appStoreUrl) {
+        messageEl.innerHTML = `
+          <strong>App not detected</strong><br>
+          <a href="${APP_CONFIG.appStoreUrl}" style="color: #2e7d32; text-decoration: underline;">
+            Download from App Store
+          </a> or close this window
+        `;
+      } else if (isAndroid && APP_CONFIG.playStoreUrl) {
+        messageEl.innerHTML = `
+          <strong>App not detected</strong><br>
+          <a href="${APP_CONFIG.playStoreUrl}" style="color: #2e7d32; text-decoration: underline;">
+            Download from Play Store
+          </a> or close this window
+        `;
+      } else {
+        // Just close the window after a delay
+        setTimeout(() => {
+          window.close();
+        }, 3000);
+      }
+    }
+    
+    function closeWindow() {
+      // Try to close, if that fails (not opened as popup), show message
+      window.close();
+      
+      // If window.close() didn't work, show message
+      setTimeout(() => {
+        const btn = document.querySelector('button');
+        if (btn && window.location.href === window.location.href) {
+          btn.textContent = 'You can close this tab now';
+          btn.disabled = true;
+        }
+      }, 100);
+    }
+    
+    // =================================================================
+    // AUTO-START
+    // =================================================================
+    
+    // Wait 3 seconds before attempting deep link
+    // (gives user time to read the success message)
+    setTimeout(() => {
+      attemptDeepLink();
+    }, 3000);
+  </script>
+</body>
+</html>

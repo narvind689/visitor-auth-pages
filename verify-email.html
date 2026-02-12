@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Verified</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f6f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 500px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      background: #4CAF50;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      animation: scaleIn 0.5s ease-out;
+    }
+
+    @keyframes scaleIn {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .error-icon {
+      background: #f44336;
+    }
+
+    .loading-icon {
+      background: #2196F3;
+      font-size: 32px;
+    }
+
+    h1 {
+      color: #1a1a1a;
+      font-size: 28px;
+      margin: 0 0 16px 0;
+      font-weight: 600;
+    }
+
+    p {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 0 0 32px 0;
+    }
+
+    .instruction-box {
+      background: #e8f5e9;
+      border: 1px solid #81c784;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .instruction-box.error {
+      background: #ffebee;
+      border-color: #ef9a9a;
+    }
+
+    .instruction-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #2e7d32;
+      font-size: 15px;
+    }
+
+    .instruction-box.error strong {
+      color: #c62828;
+    }
+
+    .instruction-box p {
+      margin: 0;
+      font-size: 14px;
+      color: #333;
+    }
+
+    button {
+      background: #3f51b5;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin: 8px;
+    }
+
+    button:hover {
+      background: #303f9f;
+    }
+
+    button.secondary {
+      background: #757575;
+    }
+
+    button.secondary:hover {
+      background: #616161;
+    }
+
+    .countdown {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #999;
+    }
+
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <!-- Loading State -->
+    <div id="loadingState">
+      <div class="icon loading-icon">
+        <div class="spinner"></div>
+      </div>
+      <h1>Verifying Your Email</h1>
+      <p>Please wait while we confirm your email address...</p>
+    </div>
+
+    <!-- Success State -->
+    <div id="successState" class="hidden">
+      <div class="icon">✓</div>
+      <h1>Email Verified Successfully!</h1>
+      <p>Your email has been confirmed and your account is now active.</p>
+      
+      <div class="instruction-box">
+        <strong>What's Next?</strong>
+        <p>Return to the app and log in with your credentials to get started.</p>
+      </div>
+
+      <button onclick="closeOrRedirect()">Return to App</button>
+      <button class="secondary" onclick="window.close()">Close Window</button>
+
+      <p class="countdown" id="countdown"></p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden">
+      <div class="icon error-icon">✕</div>
+      <h1>Verification Failed</h1>
+      <p id="errorMessage">We couldn't verify your email address.</p>
+      
+      <div class="instruction-box error">
+        <strong>What can you do?</strong>
+        <p id="errorInstruction">Please try requesting a new verification email from the app.</p>
+      </div>
+
+      <button onclick="closeOrRedirect()">Return to App</button>
+    </div>
+  </div>
+
+  <!-- Supabase JS -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <script>
+    // =================================================================
+    // 🔐 SUPABASE CONFIGURATION
+    // =================================================================
+    const SUPABASE_URL = 'https://rcibtzkjrzawendvhhgd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjaWJ0emtqcnphd2VuZHZoaGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzMjYyNTAsImV4cCI6MjA3NTkwMjI1MH0.33A0ihcvF2x7aPHb_X5fY59R7wfRZVzwTcAVQkoswwk';
+    
+    // Optional: Deep link to your Flutter app
+    const FLUTTER_APP_DEEP_LINK = null; // Example: 'visitor2026://email-verified'
+    
+    // Fallback redirect if no deep link
+    const APP_URL = '/'; // Change to your app's URL if needed
+
+    // =================================================================
+    // Initialize Supabase client
+    // =================================================================
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // =================================================================
+    // 🎯 MAIN: Verify Email
+    // =================================================================
+    verifyEmail();
+
+    async function verifyEmail() {
+      console.log('🔄 Starting email verification...');
+      
+      try {
+        const url = window.location.href;
+        const params = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        
+        console.log('📍 Current URL:', url);
+        console.log('📍 Query params:', Object.fromEntries(params.entries()));
+        console.log('📍 Hash params:', Object.fromEntries(hashParams.entries()));
+
+        let verified = false;
+        let error = null;
+
+        // Check for token_hash (Email Link confirmation)
+        if (params.has('token_hash') && params.get('type') === 'signup') {
+          console.log('✅ Detected signup confirmation with token_hash');
+          
+          const token_hash = params.get('token_hash');
+          
+          const { data, error: verifyError } = await supabaseClient.auth.verifyOtp({
+            token_hash,
+            type: 'signup',
+          });
+          
+          error = verifyError;
+          
+          if (data?.session) {
+            console.log('✅ Email verified successfully:', data.session.user.email);
+            verified = true;
+          }
+        }
+        // Check for PKCE flow
+        else if (params.has('code')) {
+          console.log('✅ Detected PKCE flow for email confirmation');
+          
+          const { data, error: exchangeError } = await supabaseClient.auth.exchangeCodeForSession(url);
+          error = exchangeError;
+          
+          if (data?.session) {
+            console.log('✅ Email verified successfully:', data.session.user.email);
+            verified = true;
+          }
+        }
+        // Check for hash-based confirmation
+        else if (hashParams.has('access_token') || hashParams.has('type')) {
+          console.log('✅ Detected hash-based email confirmation');
+          
+          const type = hashParams.get('type');
+          
+          if (type === 'signup' || type === 'email') {
+            const access_token = hashParams.get('access_token');
+            const refresh_token = hashParams.get('refresh_token');
+            
+            if (access_token && refresh_token) {
+              const { data, error: sessionError } = await supabaseClient.auth.setSession({
+                access_token,
+                refresh_token,
+              });
+              
+              error = sessionError;
+              
+              if (data?.session) {
+                console.log('✅ Email verified successfully:', data.session.user.email);
+                verified = true;
+              }
+            }
+          }
+        }
+        else {
+          console.error('❌ No verification parameters found in URL');
+          throw new Error('Invalid verification link. No authentication parameters found.');
+        }
+
+        // Handle result
+        if (verified) {
+          showSuccess();
+        } else {
+          throw error || new Error('Verification failed');
+        }
+
+      } catch (err) {
+        console.error('❌ Email verification failed:', err);
+        showError(err);
+      }
+    }
+
+    // =================================================================
+    // 🎨 UI State Management
+    // =================================================================
+    function showSuccess() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('successState').classList.remove('hidden');
+      
+      // Start countdown for auto-redirect
+      let seconds = 5;
+      const countdownEl = document.getElementById('countdown');
+      
+      const updateCountdown = () => {
+        if (seconds > 0) {
+          countdownEl.textContent = `Redirecting in ${seconds} second${seconds !== 1 ? 's' : ''}...`;
+          seconds--;
+          setTimeout(updateCountdown, 1000);
+        } else {
+          closeOrRedirect();
+        }
+      };
+      
+      updateCountdown();
+    }
+
+    function showError(error) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      
+      const errorMessageEl = document.getElementById('errorMessage');
+      const errorInstructionEl = document.getElementById('errorInstruction');
+      
+      if (error?.message?.includes('expired')) {
+        errorMessageEl.textContent = 'This verification link has expired.';
+        errorInstructionEl.textContent = 'Verification links expire after 24 hours. Please request a new verification email from the app.';
+      } else if (error?.message?.includes('already been used')) {
+        errorMessageEl.textContent = 'This verification link has already been used.';
+        errorInstructionEl.textContent = 'Your email may already be verified. Try logging in to the app.';
+      } else if (error?.message) {
+        errorMessageEl.textContent = error.message;
+      }
+    }
+
+    // =================================================================
+    // 🔗 Redirect Handler
+    // =================================================================
+    function closeOrRedirect() {
+      console.log('🔗 Attempting to redirect...');
+      
+      if (FLUTTER_APP_DEEP_LINK) {
+        console.log('🔗 Trying deep link:', FLUTTER_APP_DEEP_LINK);
+        
+        // Try deep link
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = FLUTTER_APP_DEEP_LINK;
+        document.body.appendChild(iframe);
+        
+        setTimeout(() => {
+          window.location.href = FLUTTER_APP_DEEP_LINK;
+        }, 500);
+        
+        // Fallback after 2 seconds
+        setTimeout(() => {
+          if (document.hasFocus()) {
+            console.log('ℹ️ Deep link may not have worked, trying to close window');
+            window.close();
+          }
+        }, 2000);
+      } else {
+        // No deep link - try to close or redirect
+        console.log('ℹ️ No deep link configured');
+        
+        // Try to close window (works if opened as popup)
+        window.close();
+        
+        // If window didn't close, redirect after a moment
+        setTimeout(() => {
+          window.location.href = APP_URL;
+        }, 500);
+      }
+    }
+
+    // =================================================================
+    // 🔍 Debug: Log auth state changes
+    // =================================================================
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      console.log('🔔 Auth state changed:', event, session?.user?.email || 'No user');
+    });
+  </script>
+
+</body>
+</html>
