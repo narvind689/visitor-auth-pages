@@ -78,18 +78,18 @@
       // Route based on type
       if (type === 'signup' || type === 'email' || type === 'email_change') {
         console.log('✅ Email verification flow → verify-email.html');
-        window.location.replace('/verify-email.html' + window.location.search + window.location.hash);
+        window.location.replace('verify-email.html' + window.location.search + window.location.hash);
       } 
       else if (type === 'recovery') {
         console.log('✅ Password recovery flow → reset-password.html');
-        window.location.replace('/reset-password.html' + window.location.search + window.location.hash);
+        window.location.replace('reset-password.html' + window.location.search + window.location.hash);
       }
       else if (params.has('token_hash') || params.has('code')) {
         // Has auth parameters but no type - could be either flow
         // Default to password reset for backward compatibility
         console.log('⚠️ Auth parameters found but no type specified');
         console.log('⚠️ Defaulting to password reset flow');
-        window.location.replace('/reset-password.html' + window.location.search + window.location.hash);
+        window.location.replace('reset-password.html' + window.location.search + window.location.hash);
       }
       else {
         // No parameters at all - redirect to a generic info page
