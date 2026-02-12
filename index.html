@@ -1,36 +1,104 @@
-<script>
-  // =================================================================
-  // 🚦 SMART ROUTER (STRICT MODE)
-  // =================================================================
-  (function() {
-    const params = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processing...</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f6f7fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
     
-    const type = params.get('type') || hashParams.get('type');
-
-    console.log('🚦 Authentication Flow Router');
-    console.log('📍 URL:', window.location.href);
-    console.log('📍 Type:', type);
-    console.log('📍 Query params:', Object.fromEntries(params.entries()));
-    console.log('📍 Hash params:', Object.fromEntries(hashParams.entries()));
-
-    // ================================
-    // Strict routing based on type
-    // ================================
-    if (type === 'signup' || type === 'email' || type === 'email_change') {
-      console.log('✅ Email verification flow → verify-email.html');
-      window.location.replace('verify-email.html' + window.location.search + window.location.hash);
-    } 
-    else if (type === 'recovery') {
-      console.log('✅ Password recovery flow → reset-password.html');
-      window.location.replace('reset-password.html' + window.location.search + window.location.hash);
+    .loader {
+      text-align: center;
     }
-    else {
-      // No valid type → invalid link
-      console.log('❌ Invalid or expired link (missing type)');
-      document.querySelector('h2').textContent = 'Invalid or Expired Link';
-      document.querySelector('p').textContent = 'This link is invalid, expired, or has already been used.';
-      document.querySelector('.spinner').style.display = 'none';
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #3f51b5;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
     }
-  })();
-</script>
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    h2 {
+      color: #333;
+      font-size: 20px;
+      margin: 0;
+    }
+    
+    p {
+      color: #666;
+      font-size: 14px;
+      margin: 10px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="loader">
+    <div class="spinner"></div>
+    <h2>Processing your request...</h2>
+    <p>Please wait</p>
+  </div>
+
+  <script>
+    // =================================================================
+    // 🚦 SMART ROUTER
+    // =================================================================
+    // This page detects the authentication flow type and redirects:
+    // - Email verification (signup) → /verify-email.html
+    // - Password recovery → /reset-password.html
+    
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      // Get the type parameter from either query or hash
+      const type = params.get('type') || hashParams.get('type');
+      
+      console.log('🚦 Authentication Flow Router');
+      console.log('📍 URL:', window.location.href);
+      console.log('📍 Type:', type);
+      console.log('📍 Query params:', Object.fromEntries(params.entries()));
+      console.log('📍 Hash params:', Object.fromEntries(hashParams.entries()));
+      
+      // Route based on type
+      if (type === 'signup' || type === 'email' || type === 'email_change') {
+        console.log('✅ Email verification flow → verify-email.html');
+        window.location.replace('/verify-email.html' + window.location.search + window.location.hash);
+      } 
+      else if (type === 'recovery') {
+        console.log('✅ Password recovery flow → reset-password.html');
+        window.location.replace('/reset-password.html' + window.location.search + window.location.hash);
+      }
+      else if (params.has('token_hash') || params.has('code')) {
+        // Has auth parameters but no type - could be either flow
+        // Default to password reset for backward compatibility
+        console.log('⚠️ Auth parameters found but no type specified');
+        console.log('⚠️ Defaulting to password reset flow');
+        window.location.replace('/reset-password.html' + window.location.search + window.location.hash);
+      }
+      else {
+        // No parameters at all - redirect to a generic info page
+        console.log('ℹ️ No auth parameters found');
+        document.querySelector('h2').textContent = 'Invalid Link';
+        document.querySelector('p').textContent = 'This link appears to be invalid or expired.';
+        document.querySelector('.spinner').style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>
